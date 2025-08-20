@@ -1,0 +1,23 @@
+{
+  "name": "mockauction-v2-service",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HariVijaykumar1608/mockAuction-v2-service.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/HariVijaykumar1608/mockAuction-v2-service/issues"
+  },
+  "homepage": "https://github.com/HariVijaykumar1608/mockAuction-v2-service#readme",
+  "dependencies": {
+    "socket.io": "^4.8.1"
+  }
+}
