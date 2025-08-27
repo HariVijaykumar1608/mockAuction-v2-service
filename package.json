@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/HariVijaykumar1608/mockAuction-v2-service#readme",
   "dependencies": {
+    "mongodb": "^6.19.0",
     "nanoid": "^5.1.5",
     "socket.io": "^4.8.1"
   }
