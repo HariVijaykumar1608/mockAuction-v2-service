@@ -16,7 +16,6 @@ let roomMap = {}
 const userRoomMap = {};
 
 io.on("connection", (socket) => {
-  console.log("Client connected:", socket.id);
   socket.on("create-room", (userData) => {
     const date = new Date()
     const nanoid = customAlphabet('0123456789', 4);
