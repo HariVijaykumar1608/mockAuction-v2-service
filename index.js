@@ -1,6 +1,7 @@
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 const { customAlphabet } = require("nanoid");
+const { ObjectId } = require("mongodb");
 
 const httpServer = createServer();
 const io = new Server(httpServer, {
@@ -8,59 +9,103 @@ const io = new Server(httpServer, {
 });
 
 // Store members in each room
-const roomData = {};
+let roomData = [];
+let roomMap = {}
 
 // Quick lookup: socketId → roomCode
 const userRoomMap = {};
 
 io.on("connection", (socket) => {
-  console.log("Client connected:", socket.id);
-
   socket.on("create-room", (userData) => {
+    const date = new Date()
     const nanoid = customAlphabet('0123456789', 4);
     const roomCode = nanoid();
 
     socket.join(roomCode);
+    const roomId = new ObjectId()
+    roomMap = { ...roomMap, [roomCode]: roomId };
 
-    const userObj = { ...userData, _id: socket.id, isActive: true };
-    roomData[roomCode] = [userObj];
-    userRoomMap[socket.id] = roomCode;
+    const userObj = {
+      _id: new ObjectId(),
+      socketId: socket.id,
+      roomId,
+      isActive: true,
+      userName: userData.userName,
+      team: userData.team,
+      dateAndTime: date,
+      role: "creator"
+    }
+    const roomObj = {
+      _id : roomId,
+      isActive : true,
+      creationDateAndTime : date,
+      roomCode,
+      members : [userObj]
+    }
+
+    // const userObj = { ...userData, socketId: socket.id, isActive: true, createdDateAndTime : date, role : "creator", _id: roomId,};
+    roomData.push(roomObj)
+    // userRoomMap[socket.id] = roomCode;
 
     socket.emit("room-created", roomCode);
-    socket.emit("getAllRoomMembers", roomData[roomCode] || []);
+    socket.emit("userDetails",userObj)
+    socket.emit("getAllRoomMembers", roomObj?.members || []);
   });
 
-  socket.on("join-room", (userData) => {
-    const options = [
-      "CSK", "MI", "RCB", "KKR", "GT", "LSG", "SRH", "PBKS", "RR", "DC"
-    ];
-    const { roomCode, team, userName } = userData;
-    const roomInfo = roomData[roomCode] || [];
+socket.on("join-room", (userData) => {
+  const date = new Date();
+  const options = [
+    "CSK", "MI", "RCB", "KKR", "GT", "LSG", "SRH", "PBKS", "RR", "DC"
+  ];
+  const { roomCode, team, userName } = userData;
 
-    if (roomInfo) {
-      const teamExists = roomInfo.some((obj) => obj.team === team);
-      if (teamExists) {
-        let response = {
-          msg: "Selected team has Already taken!!",
-          option: options.filter((name) => name !== team),
-        };
-        socket.emit("joinRoomErrorHandling", response);
-      } else {
-        const userObj = {
-          userName,
-          team,
-          _id: socket.id,
-          isActive: true
-        };
-        roomData[roomCode]?.push(userObj);
-        userRoomMap[socket.id] = roomCode;
+  const roomId = roomMap[roomCode]
+  const room = roomData.find((obj) => obj._id.toString() === roomId.toString());
+  const roomInfo = room?.members || [];
 
-        socket.join(roomCode);
-        socket.emit("joined-room", roomCode);
-        io.to(roomCode).emit("getAllRoomMembers", roomData[roomCode] || []);
-      }
+  if (roomInfo) {
+    const teamExists = roomInfo.some((obj) => obj.team === team);
+
+    if (teamExists) {
+      let response = {
+        msg: "Selected team has already been taken!!",
+        option: options.filter((name) => name !== team),
+      };
+      socket.emit("joinRoomErrorHandling", response);
+    } else {
+      const userObj = {
+        _id: new ObjectId(),
+        socketId: socket.id,
+        roomId,
+        isActive: true,
+        userName,
+        team,
+        dateAndTime: date,
+        role: "member",
+      };
+
+      room.members.push(userObj);
+
+      // replace room in roomData
+      roomData = roomData.map((obj) =>
+        obj._id.toString() === roomId.toString() ? room : obj
+      );
+
+      socket.join(roomCode);
+
+      socket.emit("joined-room", roomCode);
+      socket.emit("userDetails", userObj);
+      io.to(roomCode).emit("getAllRoomMembers", room.members || []);
     }
-  });
+  }
+});
+
+
+  socket.on("startAuction",(props) =>{
+    const {roomCode,timer} = props
+    io.to(roomCode).emit("auctionStarted", timer);
+
+  })
 
   socket.on("disconnect", () => {
     console.log("Client disconnected:", socket.id);
